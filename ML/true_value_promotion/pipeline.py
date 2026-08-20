@@ -1,102 +1,105 @@
 """
-PIPELINE — INGESTION → CLEANING
---------------------------------
+TVP PIPELINE — INGESTION → CLEANING → HARMONISATION
+----------------------------------------------------
 
-This file connects the ingestion and cleaning modules.
+This pipeline follows the exact structure of Sharon’s notebook:
 
-It replaces the first part of Sharon’s notebook:
-1. Load Coles, Woolworths, IGA CSVs
-2. Inspect raw data
-3. Clean the datasets
+1. Ingestion
+2. Cleaning
+3. Harmonisation
+4. (Future) Scoring
+5. (Future) Promotion Detection
 
-After this step is verified, we will extend the pipeline to:
-- harmonisation
-- feature engineering
-- scoring
-- output formatting
+Each stage is modular and testable. This file orchestrates the workflow.
 """
 
-# from ingestion import load_retailer_data
-from .ingestion import load_all_retailers, load_coles, load_iga, load_woolworths
+from .ingestion import load_coles, load_woolworths, load_iga
 from .cleaning import clean_all
+from .harmonisation import harmonise_all
 
 
-def run_ingestion_and_cleaning():
+def run_pipeline():
     """
-    Step 1 of the refactored TVP pipeline:
-    - Load raw retailer datasets
-    - Clean them using the cleaning module
+    Execute the full ingestion → cleaning → harmonisation workflow.
 
-    This corresponds to the notebook sections:
-    "Data Loading and Initial Inspection"
-    and
-    "Cleaning"
+    This function is the backbone of the refactored TVP system.
+    It loads raw retailer data, cleans it, harmonises it into a unified schema,
+    and returns all intermediate and final outputs for downstream scoring.
     """
 
-    # -----------------------------
-    # Load raw retailer data
-    # -----------------------------
-    # These functions come from ingestion.py
+    # ---------------------------------------------------------
+    # STEP 1 — INGESTION
+    # ---------------------------------------------------------
+    print("\n=== STEP 1: INGESTION ===")
     print("Loading retailer datasets...")
 
-    coles_df = load_coles()
-    wool_df = load_woolworths()
-    iga_df = load_iga()
+    coles_raw = load_coles()
+    wool_raw = load_woolworths()
+    iga_raw = load_iga()
 
-    print("Raw data loaded successfully.\n")
+    print("Raw datasets loaded successfully.\n")
 
+    # ---------------------------------------------------------
+    # STEP 2 — CLEANING
+    # ---------------------------------------------------------
+    print("=== STEP 2: CLEANING ===")
 
-    # -----------------------------
-    # Clean each dataset
-    # -----------------------------
-    # This applies the cleaning steps from cleaning.py
     print("Cleaning Coles data...")
-    coles_clean = clean_all(coles_df, "coles")
+    coles_clean = clean_all(coles_raw, "coles")
 
     print("Cleaning Woolworths data...")
-    wool_clean = clean_all(wool_df, "woolworths")
+    wool_clean = clean_all(wool_raw, "woolworths")
 
     print("Cleaning IGA data...")
-    iga_clean = clean_all(iga_df, "iga")
+    iga_clean = clean_all(iga_raw, "iga")
 
     print("Cleaning completed.\n")
 
-    
-    # -----------------------------
-    # Inspect cleaned output
-    # -----------------------------
-    # This replaces the notebook's "print(df.head())"
+    # Optional: show small samples for debugging
     print("Coles cleaned sample:")
     print(coles_clean.head(), "\n")
-    print("Coles column names:")
-    print(coles_clean.columns.tolist())
-    print("Missing values in Coles:", coles_clean.isna().sum().sum())
-    print("\nPrice columns sample:")
-    print(coles_clean[['price_now', 'price_was']].head())
 
     print("Woolworths cleaned sample:")
     print(wool_clean.head(), "\n")
-    print("Woolworths column names:")
-    print(wool_clean.columns.tolist())
-    print("Missing values in Woolworths:", wool_clean.isna().sum().sum())
-    print("\nPrice columns sample:")
-    print(wool_clean[['price_now', 'price_was']].head())
 
     print("IGA cleaned sample:")
     print(iga_clean.head(), "\n")
-    print("IGA column names:")
-    print(iga_clean.columns.tolist())
-    print("Missing values in IGA:", iga_clean.isna().sum().sum())
-    print("\nPrice columns sample:")
-    print(iga_clean[['price_now', 'price_was']].head())
-    print("\nIGA category sample:")
-    print(iga_clean[['category']].head())
 
-    # Return cleaned data for next pipeline steps
-    return coles_clean, wool_clean, iga_clean
+    # ---------------------------------------------------------
+    # STEP 3 — HARMONISATION
+    # ---------------------------------------------------------
+    print("=== STEP 3: HARMONISATION ===")
+    print("Harmonising retailer datasets...")
 
+    (
+        coles_h,
+        wool_h,
+        iga_h,
+        combined_harmonised
+    ) = harmonise_all(coles_clean, wool_clean, iga_clean)
+
+    print("Harmonisation completed.\n")
+
+    print("Unified harmonised sample:")
+    print(combined_harmonised.head(), "\n")
+
+    # ---------------------------------------------------------
+    # RETURN ALL STAGES FOR FUTURE STEPS
+    # ---------------------------------------------------------
+    return {
+        "coles_raw": coles_raw,
+        "wool_raw": wool_raw,
+        "iga_raw": iga_raw,
+        "coles_clean": coles_clean,
+        "wool_clean": wool_clean,
+        "iga_clean": iga_clean,
+        "coles_harmonised": coles_h,
+        "wool_harmonised": wool_h,
+        "iga_harmonised": iga_h,
+        "combined_harmonised": combined_harmonised,
+    }
 
 
 if __name__ == "__main__":
-    # Running this file will execute ingestion → cleaning
-    run_ingestion_and_cleaning()
+    # Running this file executes the full pipeline
+    run_pipeline()
