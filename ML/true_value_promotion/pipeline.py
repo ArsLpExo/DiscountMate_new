@@ -19,7 +19,12 @@ from .cleaning import clean_all
 from .harmonisation import harmonise_all
 from .scoring import run_scoring_pipeline
 from .promotion_detection import run_promotion_pipeline
-from ML.true_value_promotion.final_scoring import compute_final_tvp_score, rank_deals
+# from ML.true_value_promotion.final_scoring import compute_final_tvp_score, rank_deals
+from ML.true_value_promotion.final_scoring import (
+    compute_final_tvp_score,
+    rank_deals,
+    add_deal_label
+)
 
 
 def run_pipeline():
@@ -121,6 +126,23 @@ def run_pipeline():
     print("\n=== STEP 6: FINAL TVP SCORE ===")
     print(df[["retailer", "product_id", "name", "final_tvp_score", "rank"]].head())
 
+    # ---------------------------------------------------------
+    # STEP 7: TOP DEALS SELECTION
+    # ---------------------------------------------------------
+    top_deals = df.head(20)
+
+    print("\n=== STEP 7: TOP DEALS (TOP 20) ===")
+    print(top_deals[["retailer", "product_id", "name", "final_tvp_score", "rank"]])
+
+        # ---------------------------------------------------------
+    # STEP 8: DEAL LABEL FORMATTING
+    # ---------------------------------------------------------
+    df = add_deal_label(df)
+
+    print("\n=== STEP 8: DEAL LABELS ===")
+    print(df[["retailer", "product_id", "name", "deal_label"]].head())
+
+
 
     # ---------------------------------------------------------
     # RETURN ALL STAGES FOR FUTURE STEPS
@@ -138,6 +160,11 @@ def run_pipeline():
         "combined_harmonised": combined_harmonised,
         "scored": scored_df,
         "promotions": promotions_df,
+        "final_tvp": df,
+        "top_deals": top_deals,
+        "deal_labels": df[["product_id", "deal_label"]],
+
+
     }
 
 

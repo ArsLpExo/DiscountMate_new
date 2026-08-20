@@ -31,3 +31,21 @@ def rank_deals(df: pd.DataFrame) -> pd.DataFrame:
     df = df.sort_values("final_tvp_score", ascending=False)
     df["rank"] = df["final_tvp_score"].rank(method="dense", ascending=False)
     return df
+
+def add_deal_label(df):
+    labels = []
+
+    for _, row in df.iterrows():
+        if row.get("promotion_strong", False):
+            labels.append("Strong Deal")
+        elif row.get("promotion_weak", False):
+            labels.append("Weak Deal")
+        elif row.get("promotion_misleading", False):
+            labels.append("Misleading Deal")
+        elif row.get("promotion_fake", False):
+            labels.append("Fake Deal")
+        else:
+            labels.append("Invalid Deal")
+
+    df["deal_label"] = labels
+    return df
