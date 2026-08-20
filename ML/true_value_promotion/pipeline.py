@@ -1,5 +1,5 @@
 """
-TVP PIPELINE — INGESTION → CLEANING → HARMONISATION → SCORING → PROMOTION DETECTION
+TVP PIPELINE — INGESTION → CLEANING → HARMONISATION → SCORING → PROMOTION DETECTION → FINAL TVP SCORE
 --------------------------------------------------------------
 
 This pipeline follows the exact structure of Sharon’s notebook:
@@ -9,6 +9,7 @@ This pipeline follows the exact structure of Sharon’s notebook:
 3. Harmonisation
 4. Scoring
 5. Promotion Detection
+6. Final TVP Score
 
 Each stage is modular and testable. This file orchestrates the workflow.
 """
@@ -18,6 +19,7 @@ from .cleaning import clean_all
 from .harmonisation import harmonise_all
 from .scoring import run_scoring_pipeline
 from .promotion_detection import run_promotion_pipeline
+from ML.true_value_promotion.final_scoring import compute_final_tvp_score, rank_deals
 
 
 def run_pipeline():
@@ -108,6 +110,17 @@ def run_pipeline():
     print("Promotion detection completed.\n")
     print("Promotion sample:")
     print(promotions_df.head(), "\n")
+
+    # ---------------------------------------------------------
+    # STEP 6: FINAL TVP SCORE & DEAL RANKING
+    # ---------------------------------------------------------
+
+    df = compute_final_tvp_score(promotions_df)
+    df = rank_deals(df)
+
+    print("\n=== STEP 6: FINAL TVP SCORE ===")
+    print(df[["retailer", "product_id", "name", "final_tvp_score", "rank"]].head())
+
 
     # ---------------------------------------------------------
     # RETURN ALL STAGES FOR FUTURE STEPS
