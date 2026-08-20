@@ -310,6 +310,7 @@ This produces a clean, unified dataset ready for harmonisation.
 
 def clean_all(df: pd.DataFrame, retailer: str) -> pd.DataFrame:
     df = standardise_column_names(df)
+    df["retailer"] = retailer
     df = drop_irrelevant_columns(df)
     df = fill_missing_values(df)
     df = clean_size_column(df)
