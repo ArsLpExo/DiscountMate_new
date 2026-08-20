@@ -32,6 +32,7 @@ UNIFIED_COLUMNS = [
     "unit_price",
     "timestamp",
     "image_url",
+    "promotiontype",
 ]
 
 
@@ -78,6 +79,9 @@ def harmonise_coles(coles_df: pd.DataFrame) -> pd.DataFrame:
 
     # Image URL
     harmonised["image_url"] = coles_df["imageuri"]
+
+    # Promotion type
+    harmonised["promotiontype"] = ""
 
     return harmonised[UNIFIED_COLUMNS]
 
@@ -126,6 +130,9 @@ def harmonise_woolworths(wool_df: pd.DataFrame) -> pd.DataFrame:
     # Image URL
     harmonised["image_url"] = wool_df["mediumimagefile"]
 
+    # Promotion type
+    harmonised["promotiontype"] = wool_df.get("promotiontype", "").fillna("").astype(str)
+
     return harmonised[UNIFIED_COLUMNS]
 
 
@@ -172,6 +179,9 @@ def harmonise_iga(iga_df: pd.DataFrame) -> pd.DataFrame:
 
     # Image URL
     harmonised["image_url"] = iga_df["primary_image_url"]
+
+    # Promotion type
+    harmonised["promotiontype"] = ""
 
     return harmonised[UNIFIED_COLUMNS]
 
