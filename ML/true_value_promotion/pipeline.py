@@ -1,14 +1,14 @@
 """
-TVP PIPELINE — INGESTION → CLEANING → HARMONISATION
-----------------------------------------------------
+TVP PIPELINE — INGESTION → CLEANING → HARMONISATION → SCORING → PROMOTION DETECTION
+--------------------------------------------------------------
 
 This pipeline follows the exact structure of Sharon’s notebook:
 
 1. Ingestion
 2. Cleaning
 3. Harmonisation
-4. (Future) Scoring
-5. (Future) Promotion Detection
+4. Scoring
+5. Promotion Detection
 
 Each stage is modular and testable. This file orchestrates the workflow.
 """
@@ -16,15 +16,17 @@ Each stage is modular and testable. This file orchestrates the workflow.
 from .ingestion import load_coles, load_woolworths, load_iga
 from .cleaning import clean_all
 from .harmonisation import harmonise_all
+from .scoring import run_scoring_pipeline
+from .promotion_detection import run_promotion_pipeline
 
 
 def run_pipeline():
     """
-    Execute the full ingestion → cleaning → harmonisation workflow.
+    Execute the full ingestion → cleaning → harmonisation → scoring → promotion detection workflow.
 
     This function is the backbone of the refactored TVP system.
     It loads raw retailer data, cleans it, harmonises it into a unified schema,
-    and returns all intermediate and final outputs for downstream scoring.
+    applies scoring, runs promotion detection, and returns all intermediate and final outputs.
     """
 
     # ---------------------------------------------------------
@@ -84,6 +86,30 @@ def run_pipeline():
     print(combined_harmonised.head(), "\n")
 
     # ---------------------------------------------------------
+    # STEP 4 — SCORING
+    # ---------------------------------------------------------
+    print("=== STEP 4: SCORING ===")
+    print("Running scoring pipeline...")
+
+    scored_df = run_scoring_pipeline(combined_harmonised)
+
+    print("Scoring completed.\n")
+    print("Scored sample:")
+    print(scored_df.head(), "\n")
+
+    # ---------------------------------------------------------
+    # STEP 5 — PROMOTION DETECTION
+    # ---------------------------------------------------------
+    print("=== STEP 5: PROMOTION DETECTION ===")
+    print("Running promotion detection...")
+
+    promotions_df = run_promotion_pipeline(scored_df)
+
+    print("Promotion detection completed.\n")
+    print("Promotion sample:")
+    print(promotions_df.head(), "\n")
+
+    # ---------------------------------------------------------
     # RETURN ALL STAGES FOR FUTURE STEPS
     # ---------------------------------------------------------
     return {
@@ -97,6 +123,8 @@ def run_pipeline():
         "wool_harmonised": wool_h,
         "iga_harmonised": iga_h,
         "combined_harmonised": combined_harmonised,
+        "scored": scored_df,
+        "promotions": promotions_df,
     }
 
 
