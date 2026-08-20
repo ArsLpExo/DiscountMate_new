@@ -10,8 +10,9 @@ This pipeline follows the exact structure of Sharon’s notebook:
 4. Scoring
 5. Promotion Detection
 6. Final TVP Score
-
-Each stage is modular and testable. This file orchestrates the workflow.
+7. Top Deals
+8. Deal Labels
+9. JSON Output
 """
 
 from .ingestion import load_coles, load_woolworths, load_iga
@@ -19,21 +20,26 @@ from .cleaning import clean_all
 from .harmonisation import harmonise_all
 from .scoring import run_scoring_pipeline
 from .promotion_detection import run_promotion_pipeline
-# from ML.true_value_promotion.final_scoring import compute_final_tvp_score, rank_deals
+
 from ML.true_value_promotion.final_scoring import (
     compute_final_tvp_score,
     rank_deals,
     add_deal_label
 )
 
+# ---------------------------------------------------------
+# JSON HELPER
+# ---------------------------------------------------------
+def df_to_json(df):
+    """
+    Convert a pandas DataFrame to a JSON-friendly list of dicts.
+    """
+    return df.to_dict(orient="records")
+
 
 def run_pipeline():
     """
     Execute the full ingestion → cleaning → harmonisation → scoring → promotion detection workflow.
-
-    This function is the backbone of the refactored TVP system.
-    It loads raw retailer data, cleans it, harmonises it into a unified schema,
-    applies scoring, runs promotion detection, and returns all intermediate and final outputs.
     """
 
     # ---------------------------------------------------------
@@ -53,18 +59,12 @@ def run_pipeline():
     # ---------------------------------------------------------
     print("=== STEP 2: CLEANING ===")
 
-    print("Cleaning Coles data...")
     coles_clean = clean_all(coles_raw, "coles")
-
-    print("Cleaning Woolworths data...")
     wool_clean = clean_all(wool_raw, "woolworths")
-
-    print("Cleaning IGA data...")
     iga_clean = clean_all(iga_raw, "iga")
 
     print("Cleaning completed.\n")
 
-    # Optional: show small samples for debugging
     print("Coles cleaned sample:")
     print(coles_clean.head(), "\n")
 
@@ -88,7 +88,6 @@ def run_pipeline():
     ) = harmonise_all(coles_clean, wool_clean, iga_clean)
 
     print("Harmonisation completed.\n")
-
     print("Unified harmonised sample:")
     print(combined_harmonised.head(), "\n")
 
@@ -119,7 +118,6 @@ def run_pipeline():
     # ---------------------------------------------------------
     # STEP 6: FINAL TVP SCORE & DEAL RANKING
     # ---------------------------------------------------------
-
     df = compute_final_tvp_score(promotions_df)
     df = rank_deals(df)
 
@@ -134,15 +132,13 @@ def run_pipeline():
     print("\n=== STEP 7: TOP DEALS (TOP 20) ===")
     print(top_deals[["retailer", "product_id", "name", "final_tvp_score", "rank"]])
 
-        # ---------------------------------------------------------
+    # ---------------------------------------------------------
     # STEP 8: DEAL LABEL FORMATTING
     # ---------------------------------------------------------
     df = add_deal_label(df)
 
     print("\n=== STEP 8: DEAL LABELS ===")
     print(df[["retailer", "product_id", "name", "deal_label"]].head())
-
-
 
     # ---------------------------------------------------------
     # RETURN ALL STAGES FOR FUTURE STEPS
@@ -164,10 +160,23 @@ def run_pipeline():
         "top_deals": top_deals,
         "deal_labels": df[["product_id", "deal_label"]],
 
-
+        # JSON-friendly output
+        "json_output": {
+            "final_tvp": df_to_json(df),
+            "top_deals": df_to_json(top_deals),
+            "deal_labels": df_to_json(df[["product_id", "deal_label"]]),
+            "promotions": df_to_json(promotions_df),
+            "scored": df_to_json(scored_df),
+            "harmonised": df_to_json(combined_harmonised),
+        }
     }
 
 
+# ---------------------------------------------------------
+# MAIN EXECUTION BLOCK
+# ---------------------------------------------------------
 if __name__ == "__main__":
-    # Running this file executes the full pipeline
-    run_pipeline()
+    result = run_pipeline()
+
+    print("\n=== JSON OUTPUT (TOP DEALS) ===")
+    print(result["json_output"]["top_deals"][:5])
