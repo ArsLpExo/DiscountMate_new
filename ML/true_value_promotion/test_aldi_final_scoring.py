@@ -3,7 +3,7 @@ import pandas as pd
 
 from true_value_promotion.ingestion import load_aldi
 from true_value_promotion.aldi_adapter import adapt_aldi_to_tvp
-from true_value_promotion.category_mapping import add_aldi_categories
+from true_value_promotion.aldi_category_mapping import add_aldi_categories
 from true_value_promotion.feature_engineering import (
     add_aldi_historical_pricing,
     add_base_tvp_score,
