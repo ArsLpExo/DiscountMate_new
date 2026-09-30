@@ -14,12 +14,17 @@ This pipeline follows the exact structure of Sharon’s notebook:
 8. Deal Labels
 9. JSON Output
 """
+import os
+import pandas as pd
 
-from .ingestion import load_coles, load_woolworths, load_iga
+from .ingestion import load_coles, load_woolworths, load_iga, load_aldi
 from .cleaning import clean_all
-from .harmonisation import harmonise_all
+from .harmonisation import harmonise_all, harmonise_aldi
 from .scoring import run_scoring_pipeline
 from .promotion_detection import run_promotion_pipeline
+from .aldi_adapter import adapt_aldi_to_tvp
+from .feature_engineering import add_aldi_historical_pricing
+from .aldi_category_mapping import add_aldi_categories
 
 from ML.true_value_promotion.final_scoring import (
     compute_final_tvp_score,
@@ -51,6 +56,14 @@ def run_pipeline():
     coles_raw = load_coles()
     wool_raw = load_woolworths()
     iga_raw = load_iga()
+    aldi_data_path = os.environ.get("ALDI_DATA_PATH")
+
+    if not aldi_data_path:
+        raise ValueError(
+            "ALDI_DATA_PATH environment variable is required to run Aldi integration."
+        )
+
+    aldi_raw = load_aldi(aldi_data_path)
 
     print("Raw datasets loaded successfully.\n")
 
@@ -62,6 +75,10 @@ def run_pipeline():
     coles_clean = clean_all(coles_raw, "coles")
     wool_clean = clean_all(wool_raw, "woolworths")
     iga_clean = clean_all(iga_raw, "iga")
+    # Aldi Silver Layer uses its own adapter and historical price preparation.
+    aldi_clean = adapt_aldi_to_tvp(aldi_raw)
+    aldi_clean = add_aldi_historical_pricing(aldi_clean)
+    aldi_clean = add_aldi_categories(aldi_clean)
 
     print("Cleaning completed.\n")
 
@@ -86,6 +103,19 @@ def run_pipeline():
         iga_h,
         combined_harmonised
     ) = harmonise_all(coles_clean, wool_clean, iga_clean)
+    aldi_h = harmonise_aldi(aldi_clean)
+
+    combined_harmonised = pd.concat(
+        [combined_harmonised, aldi_h],
+        ignore_index=True,
+        sort=False
+    )
+
+    print(f"Aldi harmonised records: {len(aldi_h)}")
+    print(
+        "Aldi measurable historical discounts:",
+        aldi_clean["has_measurable_saving"].sum()
+    )
 
     print("Harmonisation completed.\n")
     print("Unified harmonised sample:")
@@ -147,12 +177,15 @@ def run_pipeline():
         "coles_raw": coles_raw,
         "wool_raw": wool_raw,
         "iga_raw": iga_raw,
+        "aldi_raw": aldi_raw,
         "coles_clean": coles_clean,
         "wool_clean": wool_clean,
         "iga_clean": iga_clean,
+        "aldi_clean": aldi_clean,
         "coles_harmonised": coles_h,
         "wool_harmonised": wool_h,
         "iga_harmonised": iga_h,
+        "aldi_harmonised": aldi_h,
         "combined_harmonised": combined_harmonised,
         "scored": scored_df,
         "promotions": promotions_df,

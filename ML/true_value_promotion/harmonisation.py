@@ -185,6 +185,54 @@ def harmonise_iga(iga_df: pd.DataFrame) -> pd.DataFrame:
 
     return harmonised[UNIFIED_COLUMNS]
 
+# -------------------------------------------------------------------
+# Harmonise Aldi
+# -------------------------------------------------------------------
+
+def harmonise_aldi(aldi_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Harmonise adapted Aldi Silver Layer data into the current unified TVP schema.
+    """
+    harmonised = pd.DataFrame(index=aldi_df.index)
+
+    harmonised["retailer"] = "aldi"
+    harmonised["product_id"] = aldi_df["product_id"]
+    harmonised["name"] = aldi_df["product_name"]
+    harmonised["brand"] = aldi_df.get("brand", pd.NA)
+    harmonised["category"] = aldi_df.get("main_category", "")
+    harmonised["size_value"] = pd.NA
+    harmonised["size_unit"] = pd.NA
+
+    harmonised["price_now"] = pd.to_numeric(
+        aldi_df["current_price"], errors="coerce"
+    )
+
+    harmonised["price_was"] = pd.to_numeric(
+        aldi_df["original_price"], errors="coerce"
+    )
+
+    harmonised["unit_price"] = pd.to_numeric(
+        aldi_df.get("unit_price_text", pd.Series(index=aldi_df.index)),
+        errors="coerce"
+    )
+
+    harmonised["timestamp"] = aldi_df["scrape_timestamp"]
+    harmonised["image_url"] = ""
+    harmonised["promotiontype"] = aldi_df.get(
+        "promotion_type",
+        pd.Series("", index=aldi_df.index)
+    ).fillna("").astype(str)
+
+    # Historical price reductions are valid promotion evidence for Aldi
+    if "has_measurable_saving" in aldi_df.columns:
+        measurable = aldi_df["has_measurable_saving"].fillna(False)
+        harmonised.loc[
+            measurable & (harmonised["promotiontype"].str.strip() == ""),
+            "promotiontype"
+        ] = "Historical price reduction"
+
+    return harmonised[UNIFIED_COLUMNS]
+
 
 # -------------------------------------------------------------------
 # Harmonise all retailers together
